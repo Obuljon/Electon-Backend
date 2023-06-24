@@ -1,4 +1,5 @@
 import { hash, compare } from "bcrypt";
+import nodemailer from "nodemailer";
 import userdb from "../models/user.model.js";
 import { SUCCESS_MESSAGES } from "../utils/enums/success-messages.js";
 import { ERROR_MESSAGES } from "../utils/enums/error-messages.js";
@@ -10,10 +11,18 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 // @ACCESS => ADMIN || OWN USER
 // @DESCRIPTION => Logs in user to the platform
 export const signUp = asyncHandler(async (req, res) => {
-  const { firstName, lastName, password, age, phoneNumber, profileImage } =
-    req.body;
+  const {
+    gmail,
+    firstName,
+    lastName,
+    password,
+    age,
+    phoneNumber,
+    profileImage,
+  } = req.body;
   const passwordhash = await hash(password, 10);
   const user = await userdb.create({
+    gmail,
     firstName,
     lastName,
     password: passwordhash,
@@ -112,3 +121,63 @@ export const updateUserById = asyncHandler(async (req, res) => {
     .status(200)
     .json({ data: updatingUser, message: SUCCESS_MESSAGES.USER_UPDATED });
 });
+
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { phoneNumber } = req.body;
+  const user = await userdb.findOne({ phoneNumber: phoneNumber });
+  const transporter = nodemailer.createTransport({
+    service: "Gmail",
+    auth: {
+      user: "yusuprustam8@gmail.com", // replace with your email address
+      pass: "mmcehlacplicxuql", // replace with your email password
+    },
+  });
+  req.session.pinCode = { pin: generatePinCode(), phoneNumber };
+  // Define the email options
+  const mailOptions = {
+    from: "yusuprustam8@gmail.com",
+    to: user.gmail,
+    subject: "ELECTON-BECKEND",
+    text: "PIN :" + req.session.pinCode.pin,
+  };
+
+  // Send the email
+  transporter.sendMail(mailOptions, function (error, info) {
+    if (error) {
+      throw new Error("Error sending email:", error);
+    }
+  });
+
+  return res.status(200).json({ message: "Password sent to email" });
+});
+
+export const enterPinCode = asyncHandler(async (req, res) => {
+  const { pincode } = req.body;
+
+  if (req.session.pinCode.pin == pincode) {
+    const user = await userdb.findOne({
+      phoneNumber: req.session.pinCode.phoneNumber,
+    });
+
+    req.session.user = user;
+    req.session.pinCode = null;
+    const token = await user.generateAuthToken();
+    return res
+      .header("authorization", `Bearer ${token}`)
+      .status(200)
+      .json({ data: user });
+  } else {
+    res.status(400).json({ message: "PIN code received is not correct" });
+  }
+});
+
+function generatePinCode() {
+  const pinLength = 5;
+  let pin = "";
+  for (let i = 0; i < pinLength; i++) {
+    const digit = Math.floor(Math.random() * 10);
+    pin += digit.toString();
+  }
+
+  return pin; //random XXXXX
+}

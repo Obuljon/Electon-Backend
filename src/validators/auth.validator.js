@@ -1,4 +1,5 @@
 import { body, validationResult } from "express-validator";
+import emailCheck from "email-check";
 import usersdb from "../models/user.model.js";
 import { ERROR_MESSAGES } from "../utils/enums/error-messages.js";
 import {
@@ -21,6 +22,7 @@ const checkNumberRegistrated = async (_, { req }) => {
 };
 
 const notEmpArr = [
+  "gmail",
   "firstName",
   "lastName",
   "password",
@@ -37,12 +39,29 @@ const islenGthArr = ["password"].map((item) => (item = isLength(item, 8)));
 const isNumberArr = ["phoneNumber"].map((item) => isLength(item, 12));
 
 export const registerValidators = [
+  body("phoneNumber").custom(checkNumberRegistrated),
+  body("gmail")
+    .isEmail()
+    .withMessage("Email is not valid")
+    .custom(async (value) => {
+      await emailCheck(value)
+        .then(function (res) {
+          if (res) {
+            return true;
+          } else {
+            return false;
+          }
+        })
+        .catch(function (err) {
+          throw new Error("error:" + err.message);
+        });
+    })
+    .withMessage(ERROR_MESSAGES.GMAIL_DOES_NOT_EXIST),
   notEmpArr,
   isStrArr,
   isNumArr,
   islenGthArr,
   isNumberArr,
-  body("phoneNumber").custom(checkNumberRegistrated),
 ].flat();
 
 export const loginValidators = [

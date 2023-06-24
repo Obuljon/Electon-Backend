@@ -2,6 +2,7 @@ import { model, Schema } from "mongoose";
 import jwt from "jsonwebtoken";
 
 const userModel = new Schema({
+  gmail: { type: String, required: true },
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
   password: { type: String, required: true },
@@ -20,7 +21,7 @@ function generateAuthToken() {
     tokenkey,
     {
       expiresIn: "1d",
-    },
+    }
   );
   return token;
 }

@@ -12,8 +12,9 @@ import path from "path";
 const app = express();
 const __dirname = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
-  "../",
+  "../"
 );
+
 dotenv.config({ path: __dirname + ".env.example" });
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
